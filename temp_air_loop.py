@@ -2,12 +2,16 @@ import bme280
 import smbus2
 import sds011  # ikalchev
 import time
+import datetime
 
 import requests
 import json
 
-# apiKey
-apiKey = 'DH1_D3JJ9WCWBLIFYBSWN5T68GSM7W_C'
+# Configuration
+API_KEY = 'DH1_D3JJ9WCWBLIFYBSWN5T68GSM7W_C'
+#SERVER_URL = 'https://example-server321.herokuapp.com/api/new-measure'
+SERVER_URL = 'http://127.0.0.1:8080/api/new-measure'
+
 
 # bme280 - init
 port = 1
@@ -31,6 +35,7 @@ sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
 # server side - verify user with api key
 # add global variable for api key
 # round bme measure
+# add checking if system time is correct
 
 def save_locally(data):
     file = open("local_measure.db", "a")
@@ -47,13 +52,14 @@ def send_local_saved_measure():
     headers = {'Content-Type': 'application/json'}
 
     for measure in measures:
-        newRequest = requests.post('https://example-server321.herokuapp.com/api/new-measure', data=measure, headers=headers)
+        newRequest = requests.post(SERVER_URL, data=measure, headers=headers)
     return True
 
 
 def send_measure(bme_data, sds_data, pm2_5_corr):
-    data = {'apiKey': apiKey,
-            'timestamp': str(bme_data.timestamp),
+    currentTime = datetime.datetime.utcnow().isoformat()
+    data = {'apiKey': API_KEY,
+            'date': str(currentTime)+'Z',
             'temp': round(bme_data.temperature, 2),
             'humidity': round(bme_data.humidity, 2),
             'pressure': round(bme_data.pressure, 2),
@@ -67,7 +73,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
     try:
         #send_local_saved_measure()
-        newRequest = requests.post('https://example-server321.herokuapp.com/api/new-measure', data=body, headers=headers)
+        newRequest = requests.post(SERVER_URL, data=body, headers=headers)
         print(newRequest)
     except requests.exceptions.RequestException as e:  # This is the correct syntax
         print('Error sending measure, check internet connection')
