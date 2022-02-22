@@ -12,8 +12,8 @@ import os
 # Configuration
 #apikey moved to file
 #SERVER_URL = 'https://example-server321.herokuapp.com/api/new-measure'
-SERVER_URL = 'http://127.0.0.1:8080/api/new-measure'
-SERVER_URL_PCKG = 'http://127.0.0.1:8080/api/new-measure-package'
+SERVER_URL = 'http://127.0.0.1:8080/api/measure/new-measure'
+SERVER_URL_PCKG = 'http://127.0.0.1:8080/api/measure/new-measure-package'
 MEASURE_TIME = 60
 MEASURE_INTERVAL = 180
 STATION_ID = os.system("cat /proc/cpuinfo | grep 'Serial' | cut -d ':' -d ' '  -f2") #example 00000000e34ec9d1
@@ -81,7 +81,7 @@ def save_measure_to_csv(data):
     measure_file = open("measures.csv", "a", newline='')
     csv_writer = csv.writer(measure_file)
     csv_writer.writerow(data.values())
-    csv_writer.close()
+    measure_file.close()
 
 def send_local_saved_measures():
     jsondict = {}
