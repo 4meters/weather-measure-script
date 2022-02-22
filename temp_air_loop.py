@@ -52,9 +52,13 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
     headers = {'Content-Type': 'application/json'}
     body = json.dumps(data)
 
-
     try:
         send_local_saved_measures()
+        print("Sending local saved measures complete")
+    except FileNotFoundError as e:
+        pass
+
+    try:
         newRequest = requests.post(SERVER_URL, data=body, headers=headers)
         print(newRequest)
         if newRequest.status_code == 200:
