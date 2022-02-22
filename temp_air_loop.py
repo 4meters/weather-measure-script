@@ -79,7 +79,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
     try:
         send_local_saved_measures()
-        print("Sending local saved measures complete")
+
     except FileNotFoundError as e:
         pass
 
@@ -127,7 +127,7 @@ def send_local_saved_measures():
                 os.remove('measures.csv')
             return True
         except requests.exceptions.RequestException as e:
-            print(e.response)
+            print("Error when trying to send local saved measures")
             return False
 
 
