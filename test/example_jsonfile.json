@@ -1,0 +1,37 @@
+{
+    "measureList": [
+        {
+            "apiKey": "exampleKEY",
+            "stationId": "abcdef123",
+            "date": "2022-02-18T17:43:51.787535Z",
+            "temp": "20.5",
+            "humidity": "60.4",
+            "pressure": "1020.5",
+            "pm25": "100.0",
+            "pm25Corr": "150.0",
+            "pm10": "90.0"
+        },
+        {
+            "apiKey": "exampleKEY",
+            "stationId": "abcdef123",
+            "date": "2022-02-18T17:43:53.254309Z",
+            "temp": "20.5",
+            "humidity": "60.4",
+            "pressure": "1020.5",
+            "pm25": "100.0",
+            "pm25Corr": "150.0",
+            "pm10": "90.0"
+        },
+        {
+            "apiKey": "exampleKEY",
+            "stationId": "abcdef123",
+            "date": "2022-02-18T17:43:54.587084Z",
+            "temp": "20.5",
+            "humidity": "60.4",
+            "pressure": "1020.5",
+            "pm25": "100.0",
+            "pm25Corr": "150.0",
+            "pm10": "90.0"
+        }
+    ]
+}
