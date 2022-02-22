@@ -96,7 +96,7 @@ def send_local_saved_measures():
             headers = {'Content-Type': 'application/json'}
             body = json.dumps(jsondict)
             newRequest = requests.post(SERVER_URL_PCKG, data=body, headers=headers)
-            print("Sending local saved measures result: " + newRequest)
+            print("Sending local saved measures result: " + str(newRequest))
             if newRequest.status_code==200:
                 measure_file.close()
                 os.remove('measures.csv')
