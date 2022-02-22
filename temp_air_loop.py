@@ -9,6 +9,7 @@ import json
 import csv
 
 import os
+
 # Configuration
 #apikey moved to file
 #SERVER_URL = 'https://example-server321.herokuapp.com/api/new-measure'
@@ -16,7 +17,35 @@ SERVER_URL = 'http://127.0.0.1:8080/api/measure/new-measure'
 SERVER_URL_PCKG = 'http://127.0.0.1:8080/api/measure/new-measure-package'
 MEASURE_TIME = 60
 MEASURE_INTERVAL = 180
-STATION_ID = os.system("cat /proc/cpuinfo | grep 'Serial' | cut -d ':' -d ' '  -f2") #example 00000000e34ec9d1
+
+def read_stationId():
+    os.system("cat /proc/cpuinfo | grep 'Serial' | cut -d ':' -d ' '  -f2 > station_id.txt") #example 00000000e34ec9d1
+    station_id=""
+
+    with open('station_id.txt') as stationIdFile:
+        station_id = str(stationIdFile.read()).strip("\n")
+        print(station_id)
+        return station_id
+
+def read_apiKey():
+    try:
+        api_key = open('apikey.conf', 'r').read()#'DH1_D3JJ9WCWBLIFYBSWN5T68GSM7W_C'
+        if len(api_key) != 32:
+            raise Exception
+        else:
+            return api_key
+
+    except Exception as e:
+        print(e)
+        print('Error reading apiKey file!')
+        return False
+
+
+STATION_ID = read_stationId()
+API_KEY = read_apiKey()
+
+
+
 
 # bme280 - init
 port = 1
@@ -28,15 +57,11 @@ calibration_params = bme280.load_calibration_params(bus, address)
 # sds011 - init
 sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
 
+
+
+
 def send_measure(bme_data, sds_data, pm2_5_corr):
-    try:
-        API_KEY = open('apikey.conf', 'r').read()#'DH1_D3JJ9WCWBLIFYBSWN5T68GSM7W_C'
-        if len(API_KEY) != 32:
-            raise Exception
-    except Exception as e:
-        print(e)
-        print('Error reading apiKey file!')
-        return False
+
 
     currentTime = datetime.datetime.utcnow().isoformat()
     data = {'apiKey': API_KEY,
@@ -75,13 +100,13 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
         print(e)
 
 
-
 def save_measure_to_csv(data):
 
     measure_file = open("measures.csv", "a", newline='')
     csv_writer = csv.writer(measure_file)
     csv_writer.writerow(data.values())
     measure_file.close()
+
 
 def send_local_saved_measures():
     jsondict = {}
@@ -104,9 +129,6 @@ def send_local_saved_measures():
         except requests.exceptions.RequestException as e:
             print(e.response)
             return False
-
-
-
 
 
 def do_measure():
@@ -146,7 +168,13 @@ def do_measure():
 
 
 if __name__ == "__main__":
-    do_measure()
+    try:
+        do_measure()
+    except Exception as ex:
+        sensor.sleep()
+
+    except InterruptedError as ie:
+        sensor.sleep()
 
 
 ###
@@ -162,4 +190,6 @@ if __name__ == "__main__":
 # round bme measure //done
 # add checking if system time is correct on startup of script
 # add logging errors to file
+# TODO add error logging to file with time for all exceptions
+# TODO split reading configuration to another file also saving local
 
