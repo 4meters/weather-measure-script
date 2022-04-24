@@ -21,14 +21,14 @@ def read_last_working_mode():
         if mode == "enabled" or mode == "disabled":
 
             if config_object["config"]["measureInterval"] in AVAILABLE_MEASURE_INTERVALS:
-                return mode, int(AVAILABLE_MEASURE_INTERVALS[measureInterval])
+                return mode, AVAILABLE_MEASURE_INTERVALS[measureInterval]
             else:
                 return mode, 180
 
         else:
 
             if config_object["config"]["measureInterval"] in AVAILABLE_MEASURE_INTERVALS:
-                return "disabled", int(AVAILABLE_MEASURE_INTERVALS[measureInterval])
+                return "disabled", AVAILABLE_MEASURE_INTERVALS[measureInterval]
             else:
                 return "disabled", 180
 
@@ -55,6 +55,6 @@ def get_working_mode(station_id):
     response_data = json.loads(newRequest.text)
     if newRequest.status_code == 200:
         save_last_working_mode(response_data)
-        return response_data.get('measureInterval'), response_data.get('mode')
+        return read_last_working_mode()
     else:
         return read_last_working_mode()

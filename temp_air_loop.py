@@ -99,8 +99,8 @@ def do_measure():
     try:
         while True:
             MEASURE_INTERVAL, MODE = get_working_mode(STATION_ID) #before each measure get configuration from remote
-            print("Measure interval:" + str(MEASURE_INTERVAL))
-            print("Mode" + MODE)
+            print("Measure interval: " + str(MEASURE_INTERVAL))
+            print("Mode: " + MODE)
             if MODE == "enabled":
                 sensor.sleep(sleep=False)
                 time.sleep(MEASURE_TIME)

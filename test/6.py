@@ -47,19 +47,19 @@ def save_last_working_mode(data):
         config_object.write(lastModeFile)
 
 
-def get_working_mode():
+def get_working_mode(station_id):
     # exception for no internet, use last mode saved to file
-    newRequest = requests.get('http://127.0.0.1:8080/api/station/get-working-mode/00000000e34ec9d1')
+    newRequest = requests.get('http://127.0.0.1:8080/api/station/get-working-mode/'+station_id)
     print(newRequest.status_code)
 
     response_data = json.loads(newRequest.text)
     if newRequest.status_code == 200:
         save_last_working_mode(response_data)
-        return response_data.get('measureInterval'), response_data.get('mode')
+        return read_last_working_mode()
     else:
         return read_last_working_mode()
 
 
-MODE, MEASURE_INTERVAL = get_working_mode()
-print(MEASURE_INTERVAL)
+MODE, MEASURE_INTERVAL = get_working_mode('00000000e34ec9d1')
 print(MODE)
+print(MEASURE_INTERVAL)
