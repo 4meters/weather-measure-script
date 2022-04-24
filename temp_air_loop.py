@@ -11,6 +11,7 @@ import csv
 import os
 
 from working_mode import get_working_mode
+from local_measures import *
 
 # Configuration
 #apikey moved to file
@@ -36,8 +37,6 @@ STATION_ID = read_stationId()
 MEASURE_INTERVAL, MODE = 180, "enabled" #default
 
 
-print("Measure interval:" + str(MEASURE_INTERVAL))
-print("Mode" + MODE)
 
 
 
@@ -71,7 +70,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
     body = json.dumps(data)
 
     try:
-        send_local_saved_measures()
+        send_local_saved_measures(SERVER_URL_PCKG)
 
     except FileNotFoundError as e:
         pass
@@ -93,44 +92,15 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
         print(e)
 
 
-def save_measure_to_csv(data):
-
-    measure_file = open("measures.csv", "a", newline='')
-    csv_writer = csv.writer(measure_file)
-    csv_writer.writerow(data.values())
-    measure_file.close()
-
-
-def send_local_saved_measures():
-    jsondict = {}
-    with open('measures.csv') as measure_file:
-        csv_data = csv.DictReader(measure_file, fieldnames=['apiKey','stationId','date','temp',
-                                                            'humidity','pressure','pm25','pm25Corr','pm10'])
-        jsondict['measureList']=[]
-        for rows in csv_data:
-            print(rows)#Just for reference
-            jsondict['measureList'].append(rows)  #Appending all the csv rows
-        try:
-            headers = {'Content-Type': 'application/json'}
-            body = json.dumps(jsondict)
-            newRequest = requests.post(SERVER_URL_PCKG, data=body, headers=headers)
-            print("Sending local saved measures result: " + str(newRequest))
-            if newRequest.status_code==200:
-                measure_file.close()
-                os.remove('measures.csv')
-            return True
-        except requests.exceptions.RequestException as e:
-            print("Error when trying to send local saved measures")
-            return False
-
 
 def do_measure():
     global MEASURE_INTERVAL, MODE
 
     try:
-
         while True:
             MEASURE_INTERVAL, MODE = get_working_mode(STATION_ID) #before each measure get configuration from remote
+            print("Measure interval:" + str(MEASURE_INTERVAL))
+            print("Mode" + MODE)
             if MODE == "enabled":
                 sensor.sleep(sleep=False)
                 time.sleep(MEASURE_TIME)
@@ -160,6 +130,7 @@ def do_measure():
                 print("Waiting for next measure...")
                 time.sleep(MEASURE_INTERVAL)
             else:
+                print("Waiting for updating configuration...")
                 time.sleep(180) #wait 3min and check for new configuration
 
     except KeyboardInterrupt:
