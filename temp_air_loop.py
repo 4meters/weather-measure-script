@@ -10,13 +10,16 @@ import csv
 
 import os
 
+from working_mode import get_working_mode
+
 # Configuration
 #apikey moved to file
 #SERVER_URL = 'https://example-server321.herokuapp.com/api/new-measure'
-SERVER_URL = 'http://127.0.0.1:8080/api/measure/new-measure'
+BASE_SERVEL_URL= 'http://127.0.0.1:8080'
+SERVER_URL = BASE_SERVEL_URL + '/api/measure/new-measure' #?
 SERVER_URL_PCKG = 'http://127.0.0.1:8080/api/measure/new-measure-package'
 MEASURE_TIME = 60
-MEASURE_INTERVAL = 180
+
 
 def read_stationId():
     os.system("cat /proc/cpuinfo | grep 'Serial' | cut -d ':' -d ' '  -f2 > station_id.txt") #example 00000000e34ec9d1
@@ -27,23 +30,14 @@ def read_stationId():
         print(station_id)
         return station_id
 
-def read_apiKey():
-    try:
-        api_key = open('apikey.conf', 'r').read()#'DH1_D3JJ9WCWBLIFYBSWN5T68GSM7W_C'
-        if len(api_key) != 32:
-            raise Exception
-        else:
-            return api_key
-
-    except Exception as e:
-        print(e)
-        print('Error reading apiKey file!')
-        return False
-
 
 STATION_ID = read_stationId()
-API_KEY = read_apiKey()
 
+MEASURE_INTERVAL, MODE = 180, "enabled" #default
+
+
+print("Measure interval:" + str(MEASURE_INTERVAL))
+print("Mode" + MODE)
 
 
 
@@ -64,8 +58,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
 
     currentTime = datetime.datetime.utcnow().isoformat()
-    data = {'apiKey': API_KEY,
-            'stationId': STATION_ID,
+    data = {'stationId': STATION_ID,
             'date': str(currentTime)+'Z',
             'temp': round(bme_data.temperature, 2),
             'humidity': round(bme_data.humidity, 2),
@@ -132,36 +125,42 @@ def send_local_saved_measures():
 
 
 def do_measure():
+    global MEASURE_INTERVAL, MODE
+
     try:
 
         while True:
-            sensor.sleep(sleep=False)
-            time.sleep(MEASURE_TIME)
+            MEASURE_INTERVAL, MODE = get_working_mode(STATION_ID) #before each measure get configuration from remote
+            if MODE == "enabled":
+                sensor.sleep(sleep=False)
+                time.sleep(MEASURE_TIME)
 
-            # read data bme280
-            bme_data = bme280.sample(bus, address, calibration_params)
-            print(bme_data)
+                # read data bme280
+                bme_data = bme280.sample(bus, address, calibration_params)
+                print(bme_data)
 
-            sds011_data = sensor.query()
-            sensor.sleep()
+                sds011_data = sensor.query()
+                sensor.sleep()
 
-            pm2_5, pm10 = sds011_data
-            print("pm2.5: " + str(pm2_5))
+                pm2_5, pm10 = sds011_data
+                print("pm2.5: " + str(pm2_5))
 
-            print("sds011 pm2.5 corrected")
-            if bme_data.humidity > 95.00:
-                humidity = 95.00
+                print("sds011 pm2.5 corrected")
+                if bme_data.humidity > 95.00:
+                    humidity = 95.00
+                else:
+                    humidity = bme_data.humidity
+                pm2_5_corrected = pm2_5 * 2.8 * pow((100 - humidity), -0.3745)
+                print("pm2.5 corrected :" + str(pm2_5_corrected))
+                print("pm10: " + str(pm10))
+
+                # send measure to remote server
+                send_measure(bme_data, sds011_data, pm2_5_corrected)
+
+                print("Waiting for next measure...")
+                time.sleep(MEASURE_INTERVAL)
             else:
-                humidity = bme_data.humidity
-            pm2_5_corrected = pm2_5 * 2.8 * pow((100 - humidity), -0.3745)
-            print("pm2.5 corrected :" + str(pm2_5_corrected))
-            print("pm10: " + str(pm10))
-
-            # send measure to remote server
-            send_measure(bme_data, sds011_data, pm2_5_corrected)
-
-            print("Waiting for next measure...")
-            time.sleep(MEASURE_INTERVAL)
+                time.sleep(180) #wait 3min and check for new configuration
 
     except KeyboardInterrupt:
         sensor.sleep()
@@ -170,6 +169,7 @@ def do_measure():
 if __name__ == "__main__":
     try:
         do_measure()
+
     except Exception as ex:
         sensor.sleep()
 
