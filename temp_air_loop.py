@@ -34,7 +34,7 @@ def read_stationId():
 
 STATION_ID = read_stationId()
 
-MEASURE_INTERVAL, MODE = 180, "enabled" #default
+MODE = "enabled", 180 #default
 
 
 
@@ -94,11 +94,11 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
 
 def do_measure():
-    global MEASURE_INTERVAL, MODE
+    global MODE, MEASURE_INTERVAL
 
     try:
         while True:
-            MEASURE_INTERVAL, MODE = get_working_mode(STATION_ID) #before each measure get configuration from remote
+            MODE, MEASURE_INTERVAL = get_working_mode(STATION_ID) #before each measure get configuration from remote
             print("Measure interval: " + str(MEASURE_INTERVAL))
             print("Mode: " + MODE)
             if MODE == "enabled":
