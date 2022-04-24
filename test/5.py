@@ -1,7 +1,5 @@
 import json
-import os
 import requests
-import configparser
 
 def read_last_working_mode():
     try:

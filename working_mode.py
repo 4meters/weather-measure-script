@@ -21,14 +21,14 @@ def read_last_working_mode():
         if mode == "enabled" or mode == "disabled":
 
             if config_object["config"]["measureInterval"] in AVAILABLE_MEASURE_INTERVALS:
-                return mode, AVAILABLE_MEASURE_INTERVALS[measureInterval]
+                return mode, int(AVAILABLE_MEASURE_INTERVALS[measureInterval])
             else:
                 return mode, 180
 
         else:
 
             if config_object["config"]["measureInterval"] in AVAILABLE_MEASURE_INTERVALS:
-                return "disabled", AVAILABLE_MEASURE_INTERVALS[measureInterval]
+                return "disabled", int(AVAILABLE_MEASURE_INTERVALS[measureInterval])
             else:
                 return "disabled", 180
 
