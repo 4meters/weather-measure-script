@@ -14,7 +14,7 @@ def save_measure_to_csv(data):
 def send_local_saved_measures(SERVER_URL_PCKG):
     jsondict = {}
     with open('measures.csv') as measure_file:
-        csv_data = csv.DictReader(measure_file, fieldnames=['apiKey','stationId','date','temp',
+        csv_data = csv.DictReader(measure_file, fieldnames=['stationId','date','temp',
                                                             'humidity','pressure','pm25','pm25Corr','pm10'])
         jsondict['measureList']=[]
         for rows in csv_data:
