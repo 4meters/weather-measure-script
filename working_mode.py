@@ -61,3 +61,4 @@ def get_working_mode(station_id):
             return read_last_working_mode()
     except requests.exceptions.RequestException as e:  # This is the correct syntax
         print('Error getting configuration from remote')
+        return read_last_working_mode()
