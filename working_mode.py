@@ -49,12 +49,15 @@ def save_last_working_mode(data):
 
 def get_working_mode(station_id):
     # exception for no internet, use last mode saved to file
-    newRequest = requests.get('http://127.0.0.1:8080/api/station/get-working-mode/'+station_id)
-    print(newRequest.status_code)
+    try:
+        newRequest = requests.get('http://127.0.0.1:8080/api/station/get-working-mode/'+station_id)
+        print(newRequest.status_code)
 
-    response_data = json.loads(newRequest.text)
-    if newRequest.status_code == 200:
-        save_last_working_mode(response_data)
-        return read_last_working_mode()
-    else:
-        return read_last_working_mode()
+        response_data = json.loads(newRequest.text)
+        if newRequest.status_code == 200:
+            save_last_working_mode(response_data)
+            return read_last_working_mode()
+        else:
+            return read_last_working_mode()
+    except requests.exceptions.RequestException as e:  # This is the correct syntax
+        print('Error getting configuration from remote')
