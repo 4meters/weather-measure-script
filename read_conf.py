@@ -1,1 +1,0 @@
-#TODO split reading configuration to seperate file

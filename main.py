@@ -69,19 +69,14 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
     headers = {'Content-Type': 'application/json'}
     body = json.dumps(data)
 
-    try:
-        send_local_saved_measures(SERVER_URL_PCKG)
-
-    except FileNotFoundError as e:
-        pass
 
     try:
         newRequest = requests.post(SERVER_URL, data=body, headers=headers)
         print(newRequest)
         if newRequest.status_code == 200:
             print("Server response: ok")
-        elif newRequest.status_code == 401:
-            print("Bad apikey")
+        elif newRequest.status_code == 400:
+            print("Bad request - propably wrong stationId")
             raise requests.exceptions.RequestException
         else:
             raise requests.exceptions.RequestException
@@ -101,6 +96,12 @@ def do_measure():
             MODE, MEASURE_INTERVAL = get_working_mode(STATION_ID) #before each measure get configuration from remote
             print("Measure interval: " + str(MEASURE_INTERVAL))
             print("Mode: " + MODE)
+
+            try:
+                send_local_saved_measures(SERVER_URL_PCKG)
+            except FileNotFoundError as e:
+                pass
+
             if MODE == "enabled":
                 sensor.sleep(sleep=False)
                 time.sleep(MEASURE_TIME)
