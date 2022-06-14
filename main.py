@@ -3,11 +3,6 @@ import smbus2
 import sds011  # ikalchev
 import time
 import datetime
-import requests
-import json
-import csv
-
-import os
 
 from working_mode import get_working_mode
 from local_measures import *
@@ -143,21 +138,4 @@ if __name__ == "__main__":
 
     except InterruptedError as ie:
         sensor.sleep()
-
-
-###
-# TODO
-# -add humidity correction // done
-# -add work mode check to library //always in sleep so no need
-# -convert data to JSON //done
-# -send to remote //done easy way - do refactor
-# -catch exception //done - test
-###
-# server side - verify user with api key //done
-# add global variable for api key //done - from file now
-# round bme measure //done
-# add checking if system time is correct on startup of script
-# add logging errors to file
-# TODO add error logging to file with time for all exceptions
-# TODO split reading configuration to another file also saving local
 
