@@ -3,7 +3,6 @@ import smbus2
 import sds011  # ikalchev
 import time
 import datetime
-
 import requests
 import json
 import csv
@@ -13,12 +12,13 @@ import os
 from working_mode import get_working_mode
 from local_measures import *
 
+
 # Configuration
-#apikey moved to file
-#SERVER_URL = 'https://example-server321.herokuapp.com/api/new-measure'
-BASE_SERVEL_URL= 'http://127.0.0.1:8080'
-SERVER_URL = BASE_SERVEL_URL + '/api/measure/new-measure' #?
-SERVER_URL_PCKG = 'http://127.0.0.1:8080/api/measure/new-measure-package'
+
+BASE_SERVER_URL= 'http://127.0.0.1:8080'
+SERVER_URL = BASE_SERVER_URL + '/api/measure/new-measure' #?
+SERVER_URL_PCKG = BASE_SERVER_URL + '/api/measure/new-measure-package'
+
 MEASURE_TIME = 60
 
 
@@ -38,8 +38,6 @@ MODE = "enabled", 180 #default
 
 
 
-
-
 # bme280 - init
 port = 1
 address = 0x77
@@ -49,7 +47,6 @@ calibration_params = bme280.load_calibration_params(bus, address)
 
 # sds011 - init
 sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
-
 
 
 
@@ -76,11 +73,11 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
         if newRequest.status_code == 200:
             print("Server response: ok")
         elif newRequest.status_code == 400:
-            print("Bad request - propably wrong stationId")
+            print("Bad request")
             raise requests.exceptions.RequestException
         else:
             raise requests.exceptions.RequestException
-    except requests.exceptions.RequestException as e:  # This is the correct syntax
+    except requests.exceptions.RequestException as e:
         print('Error sending measure, check internet connection')
         save_measure_to_csv(data)
     except Exception as e:
@@ -90,7 +87,6 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
 def do_measure():
     global MODE, MEASURE_INTERVAL
-
     try:
         while True:
             MODE, MEASURE_INTERVAL = get_working_mode(STATION_ID) #before each measure get configuration from remote
