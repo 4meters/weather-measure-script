@@ -104,7 +104,7 @@ def do_measure():
 
                 sds011_data = sensor.query()
                 sensor.sleep()
-                sds011_data = None #test exception
+                #sds011_data = None #test exception
 
                 #fix when sds011 sensor stop working
                 try:
@@ -115,7 +115,6 @@ def do_measure():
                         errorlog.write(datetime.datetime.utcnow().isoformat()+" Failed to read sds011 data\n")
                     print("Rebooting system")
                     write_reboot_count(+1)
-                    print("Tick!")
                     time.sleep(3)
                     os.system("reboot")
 
