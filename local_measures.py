@@ -13,13 +13,16 @@ def save_measure_to_csv(data):
 
 def send_local_saved_measures(SERVER_URL_PCKG):
     jsondict = {}
-    with open('measures.csv') as measure_file:
+    with open('measures.csv', "r") as measure_file:
         csv_data = csv.DictReader(measure_file, fieldnames=['stationId','date','temp',
                                                             'humidity','pressure','pm25','pm25Corr','pm10'])
         jsondict['measureList']=[]
-        for rows in csv_data:
-            print(rows)#Just for reference
-            jsondict['measureList'].append(rows)  #Appending all the csv rows
+        try:
+            for rows in csv_data:
+                print(rows)#Just for reference
+                jsondict['measureList'].append(rows)  #Appending all the csv rows
+        except csv.Error: #fix for null line at end of file
+            pass
         try:
             headers = {'Content-Type': 'application/json'}
             body = json.dumps(jsondict)

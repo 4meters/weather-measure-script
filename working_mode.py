@@ -8,7 +8,7 @@ AVAILABLE_MEASURE_INTERVALS = {"3min": 180, "5min": 300, "10min": 600, "15min": 
 def read_last_working_mode():
     try:
         config_object = ConfigParser()
-        config_object.read("example_last_mode.conf")
+        config_object.read("last_mode.conf")
 
         if config_object.has_section("config"):
             pass
@@ -43,7 +43,7 @@ def save_last_working_mode(data):
         "measureInterval": data.get('measureInterval')
     }
 
-    with open('example_last_mode.conf', 'w') as lastModeFile:
+    with open('last_mode.conf', 'w') as lastModeFile:
         config_object.write(lastModeFile)
 
 

@@ -6,12 +6,14 @@ import datetime
 
 from working_mode import get_working_mode
 from local_measures import *
+from reboot_counter import *
 
 
 # Configuration
 
 BASE_SERVER_URL= 'http://127.0.0.1:8080'
-SERVER_URL = BASE_SERVER_URL + '/api/measure/new-measure' #?
+#BASE_SERVER_URL= 'https://weather-serverapplication.herokuapp.com'
+SERVER_URL = BASE_SERVER_URL + '/api/measure/new-measure'
 SERVER_URL_PCKG = BASE_SERVER_URL + '/api/measure/new-measure-package'
 
 MEASURE_TIME = 60
@@ -42,7 +44,6 @@ calibration_params = bme280.load_calibration_params(bus, address)
 
 # sds011 - init
 sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
-
 
 
 def send_measure(bme_data, sds_data, pm2_5_corr):
@@ -103,8 +104,21 @@ def do_measure():
 
                 sds011_data = sensor.query()
                 sensor.sleep()
+                sds011_data = None #test exception
 
-                pm2_5, pm10 = sds011_data
+                #fix when sds011 sensor stop working
+                try:
+                    pm2_5, pm10 = sds011_data
+                    write_reboot_count(0)
+                except TypeError:
+                    with open("error.log", "a") as errorlog:
+                        errorlog.write(datetime.datetime.utcnow().isoformat()+" Failed to read sds011 data\n")
+                    print("Rebooting system")
+                    write_reboot_count(+1)
+                    print("Tick!")
+                    time.sleep(3)
+                    os.system("reboot")
+
                 print("pm2.5: " + str(pm2_5))
 
                 print("sds011 pm2.5 corrected")
@@ -131,11 +145,21 @@ def do_measure():
 
 if __name__ == "__main__":
     try:
-        do_measure()
+        if check_reboot_count():
+            do_measure()
+        else:
+            print("\nStop - too many failed attempts to read sds011 sensor data.\n"
+                  "Reboot count exceeds 3 times.\n"
+                  "Check if sensor is connected properly.\n\n"
+                  "When problem is fixed, remove reboot.count file to reset counter.")
+            with open("error.log", "a") as errorlog:
+                errorlog.write(datetime.datetime.utcnow().isoformat()+" "+"Reboot count exceeds 3 times.\n")
 
     except Exception as ex:
         sensor.sleep()
+        print("Exception: "+ex)
 
     except InterruptedError as ie:
         sensor.sleep()
+        print("Interrupted error: "+ie)
 
