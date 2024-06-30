@@ -3,10 +3,14 @@ import smbus2
 import sds011  # ikalchev
 import time
 import datetime
+import RPi.GPIO as GPIO
+import serial
+import traceback
+
 
 from working_mode import get_working_mode
 from local_measures import *
-from reboot_counter import *
+from sds011_reset_counter import *
 
 
 # Configuration
@@ -16,8 +20,10 @@ BASE_SERVER_URL= 'http://127.0.0.1:8080'
 SERVER_URL = BASE_SERVER_URL + '/api/measure/new-measure'
 SERVER_URL_PCKG = BASE_SERVER_URL + '/api/measure/new-measure-package'
 
-MEASURE_TIME = 60
+MEASURE_TIME = 10
 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(23, GPIO.OUT)
 
 def read_stationId():
     os.system("cat /proc/cpuinfo | grep 'Serial' | cut -d ':' -d ' '  -f2 > station_id.txt") #example 00000000e34ec9d1
@@ -41,9 +47,6 @@ address = 0x77
 bus = smbus2.SMBus(port)
 
 calibration_params = bme280.load_calibration_params(bus, address)
-
-# sds011 - init
-sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
 
 
 def send_measure(bme_data, sds_data, pm2_5_corr):
@@ -82,7 +85,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
 
 def do_measure():
-    global MODE, MEASURE_INTERVAL
+    global MODE, MEASURE_INTERVAL, sensor
     try:
         while True:
             MODE, MEASURE_INTERVAL = get_working_mode(STATION_ID) #before each measure get configuration from remote
@@ -104,19 +107,32 @@ def do_measure():
 
                 sds011_data = sensor.query()
                 sensor.sleep()
-                #sds011_data = None #test exception
 
                 #fix when sds011 sensor stop working
                 try:
                     pm2_5, pm10 = sds011_data
-                    write_reboot_count(0)
-                except TypeError:
+                    write_sds011_reset_count(0)
+                except (TypeError, serial.SerialException) as e:  # when sds011_data = None
+                    if not check_sds011_reset_count():
+                        print("\nStop - too many failed attempts to read sds011 sensor data.\n"
+                              "SDS011 sensor reset count exceeds 3 times.\n"
+                              "Check if sensor is connected properly.\n\n"
+                              "When problem is fixed, remove reset-sds011.count file to reset counter.")
+                        with open("error.log", "a") as errorlog:
+                            errorlog.write(datetime.datetime.utcnow().isoformat()+" "+"SDS011 reset count exceeds 3 times.\n")
+                        raise Exception
                     with open("error.log", "a") as errorlog:
                         errorlog.write(datetime.datetime.utcnow().isoformat()+" Failed to read sds011 data\n")
-                    print("Rebooting system")
-                    write_reboot_count(+1)
-                    time.sleep(3)
-                    os.system("reboot")
+                    print("Power cycling sensor due to read error\n")
+                    sensor.close_serial()
+                    GPIO.output(23, GPIO.HIGH) #poweroff sds011 using irf9540 mosfet connected to gpio
+                    time.sleep(2)
+                    GPIO.output(23, GPIO.LOW) #poweron sds011
+                    time.sleep(1)
+                    write_sds011_reset_count(+1)
+                    sensor.open_serial()
+                    #sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
+                    continue
 
                 print("pm2.5: " + str(pm2_5))
 
@@ -143,22 +159,23 @@ def do_measure():
 
 
 if __name__ == "__main__":
+    global sensor
     try:
-        if check_reboot_count():
-            do_measure()
-        else:
-            print("\nStop - too many failed attempts to read sds011 sensor data.\n"
-                  "Reboot count exceeds 3 times.\n"
-                  "Check if sensor is connected properly.\n\n"
-                  "When problem is fixed, remove reboot.count file to reset counter.")
-            with open("error.log", "a") as errorlog:
-                errorlog.write(datetime.datetime.utcnow().isoformat()+" "+"Reboot count exceeds 3 times.\n")
+        GPIO.output(23, GPIO.HIGH) #powercycle sds011 serial reader in case it disappear from /dev/tty0
+        time.sleep(2)
+        GPIO.output(23, GPIO.LOW)
+        time.sleep(1)
+        # sds011 - init
+        sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
+        do_measure()
 
     except Exception as ex:
         sensor.sleep()
-        print("Exception: "+ex)
+        print("Exception: "+type(ex).__name__)
+        traceback.print_exc()
 
     except InterruptedError as ie:
         sensor.sleep()
-        print("Interrupted error: "+ie)
+        print("Interrupted error: "+type(ie).__name__)
+        traceback.print_exc()
 
