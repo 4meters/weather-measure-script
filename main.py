@@ -7,6 +7,8 @@ import RPi.GPIO as GPIO
 import serial
 import traceback
 
+import py_AHTx0
+
 
 from working_mode import get_working_mode
 from local_measures import *
@@ -20,7 +22,7 @@ BASE_SERVER_URL= 'http://127.0.0.1:8080'
 SERVER_URL = BASE_SERVER_URL + '/api/measure/new-measure'
 SERVER_URL_PCKG = BASE_SERVER_URL + '/api/measure/new-measure-package'
 
-MEASURE_TIME = 10
+MEASURE_TIME = 60
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(23, GPIO.OUT)
@@ -39,24 +41,27 @@ STATION_ID = read_stationId()
 
 MODE = "enabled", 180 #default
 
-
+#smbus i2c port
+port = 1
 
 # bme280 - init
-port = 1
-address = 0x77
+bme280_address = 0x77
 bus = smbus2.SMBus(port)
+calibration_params = bme280.load_calibration_params(bus, bme280_address)
 
-calibration_params = bme280.load_calibration_params(bus, address)
+# aht10 - init
+aht10_address = 0x38
+aht10_sensor = py_AHTx0.AHTx0(port, aht10_address)
 
 
-def send_measure(bme_data, sds_data, pm2_5_corr):
+def send_measure(bme_data, aht10_humidity, sds_data, pm2_5_corr):
 
 
     currentTime = datetime.datetime.utcnow().isoformat()
     data = {'stationId': STATION_ID,
             'date': str(currentTime)+'Z',
             'temp': round(bme_data.temperature, 2),
-            'humidity': round(bme_data.humidity, 2),
+            'humidity': round(aht10_humidity, 2),
             'pressure': round(bme_data.pressure, 2),
             'pm25': (sds_data[0]),
             'pm10': (sds_data[1]),
@@ -85,7 +90,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
 
 def do_measure():
-    global MODE, MEASURE_INTERVAL, sensor
+    global MODE, MEASURE_INTERVAL, sds011_sensor
     try:
         while True:
             MODE, MEASURE_INTERVAL = get_working_mode(STATION_ID) #before each measure get configuration from remote
@@ -98,15 +103,15 @@ def do_measure():
                 pass
 
             if MODE == "enabled":
-                sensor.sleep(sleep=False)
+                sds011_sensor.sleep(sleep=False)
                 time.sleep(MEASURE_TIME)
 
                 # read data bme280
-                bme_data = bme280.sample(bus, address, calibration_params)
+                bme_data = bme280.sample(bus, bme280_address, calibration_params)
                 print(bme_data)
 
-                sds011_data = sensor.query()
-                sensor.sleep()
+                sds011_data = sds011_sensor.query()
+                sds011_sensor.sleep()
 
                 #fix when sds011 sensor stop working
                 try:
@@ -124,29 +129,35 @@ def do_measure():
                     with open("error.log", "a") as errorlog:
                         errorlog.write(datetime.datetime.utcnow().isoformat()+" Failed to read sds011 data\n")
                     print("Power cycling sensor due to read error\n")
-                    sensor.close_serial()
+                    sds011_sensor.close_serial()
                     GPIO.output(23, GPIO.HIGH) #poweroff sds011 using irf9540 mosfet connected to gpio
                     time.sleep(2)
                     GPIO.output(23, GPIO.LOW) #poweron sds011
                     time.sleep(1)
                     write_sds011_reset_count(+1)
-                    sensor.open_serial()
+                    sds011_sensor.open_serial()
                     #sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
                     continue
 
                 print("pm2.5: " + str(pm2_5))
 
                 print("sds011 pm2.5 corrected")
-                if bme_data.humidity > 95.00:
-                    humidity = 95.00
-                else:
-                    humidity = bme_data.humidity
-                pm2_5_corrected = pm2_5 * 2.8 * pow((100 - humidity), -0.3745)
+
+                aht10_humidity = aht10_sensor.relative_humidity
+
+                print("aht10 humidity: "+str(aht10_humidity))
+
+                humidity_for_pm2_5 = aht10_humidity
+
+                if aht10_humidity > 95.00:
+                    humidity_for_pm2_5 = 95.00
+
+                pm2_5_corrected = pm2_5 * 2.8 * pow((100 - humidity_for_pm2_5), -0.3745)
                 print("pm2.5 corrected :" + str(pm2_5_corrected))
                 print("pm10: " + str(pm10))
 
                 # send measure to remote server
-                send_measure(bme_data, sds011_data, pm2_5_corrected)
+                send_measure(bme_data, aht10_humidity, sds011_data, pm2_5_corrected)
 
                 print("Waiting for next measure...")
                 time.sleep(MEASURE_INTERVAL)
@@ -155,27 +166,27 @@ def do_measure():
                 time.sleep(180) #wait 3min and check for new configuration
 
     except KeyboardInterrupt:
-        sensor.sleep()
+        sds011_sensor.sleep()
 
 
 if __name__ == "__main__":
-    global sensor
+    global sds011_sensor
     try:
         GPIO.output(23, GPIO.HIGH) #powercycle sds011 serial reader in case it disappear from /dev/tty0
         time.sleep(2)
         GPIO.output(23, GPIO.LOW)
         time.sleep(1)
         # sds011 - init
-        sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
+        sds011_sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
         do_measure()
 
     except Exception as ex:
-        sensor.sleep()
+        sds011_sensor.sleep()
         print("Exception: "+type(ex).__name__)
         traceback.print_exc()
 
     except InterruptedError as ie:
-        sensor.sleep()
+        sds011_sensor.sleep()
         print("Interrupted error: "+type(ie).__name__)
         traceback.print_exc()
 
