@@ -50,11 +50,11 @@ def save_last_working_mode(data):
 def get_working_mode(station_id):
     # exception for no internet, use last mode saved to file
     try:
-        newRequest = requests.get('http://127.0.0.1:8080/api/station/get-working-mode/'+station_id)
-        print(newRequest.status_code)
+        new_request = requests.get('http://127.0.0.1:8080/api/station/get-working-mode/'+station_id)
+        print(new_request.status_code)
 
-        response_data = json.loads(newRequest.text)
-        if newRequest.status_code == 200:
+        response_data = json.loads(new_request.text)
+        if new_request.status_code == 200:
             save_last_working_mode(response_data)
             return read_last_working_mode()
         else:
