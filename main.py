@@ -1,6 +1,6 @@
 import bme280
 import smbus2
-import sds011  # ikalchev
+import sds011  # in v2 is from my github repo (py-sds011), I have added close and open serial to library
 import time
 import datetime
 import RPi.GPIO as GPIO
@@ -17,8 +17,8 @@ from sds011_reset_counter import *
 
 # Configuration
 
-BASE_SERVER_URL= 'http://127.0.0.1:8080'
-#BASE_SERVER_URL= 'https://weather-serverapplication.herokuapp.com'
+BASE_SERVER_URL = 'http://127.0.0.1:8080'
+
 SERVER_URL = BASE_SERVER_URL + '/api/measure/new-measure'
 SERVER_URL_PCKG = BASE_SERVER_URL + '/api/measure/new-measure-package'
 
@@ -29,7 +29,7 @@ GPIO.setup(23, GPIO.OUT)
 
 def read_stationId():
     os.system("cat /proc/cpuinfo | grep 'Serial' | cut -d ':' -d ' '  -f2 > station_id.txt") #example 00000000e34ec9d1
-    station_id=""
+    station_id = ""
 
     with open('station_id.txt') as stationIdFile:
         station_id = str(stationIdFile.read()).strip("\n")
@@ -42,16 +42,16 @@ STATION_ID = read_stationId()
 MODE = "enabled", 180 #default
 
 #smbus i2c port
-port = 1
+smbus_i2c_port = 1
 
 # bme280 - init
 bme280_address = 0x77
-bus = smbus2.SMBus(port)
-calibration_params = bme280.load_calibration_params(bus, bme280_address)
+bus = smbus2.SMBus(smbus_i2c_port)
+bme280_calibration_params = bme280.load_calibration_params(bus, bme280_address)
 
 # aht10 - init
 aht10_address = 0x38
-aht10_sensor = py_AHTx0.AHTx0(port, aht10_address)
+aht10_sensor = py_AHTx0.AHTx0(smbus_i2c_port, aht10_address)
 
 
 def send_measure(bme_data, aht10_humidity, sds_data, pm2_5_corr):
@@ -107,7 +107,7 @@ def do_measure():
                 time.sleep(MEASURE_TIME)
 
                 # read data bme280
-                bme_data = bme280.sample(bus, bme280_address, calibration_params)
+                bme_data = bme280.sample(bus, bme280_address, bme280_calibration_params)
                 print(bme_data)
 
                 sds011_data = sds011_sensor.query()
