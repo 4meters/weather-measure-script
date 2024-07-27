@@ -41,3 +41,7 @@ Measure script: https://github.com/4meters/weather-measure-script
 
 ## How to run:
 Run `main.py` on Raspberry Pi with sensors connected
+
+## v1 and v2 versions
+On master is v1 version - with no additional mosfet irf9540 required
+v2 version is using irf9540 mosfet to power cycle sds011 sensor when it's stops reading data
