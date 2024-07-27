@@ -3,6 +3,7 @@ import smbus2
 import sds011  # ikalchev
 import time
 import datetime
+import traceback
 
 from working_mode import get_working_mode
 from local_measures import *
@@ -36,13 +37,13 @@ MODE = "enabled", 180 #default
 
 # bme280 - init
 port = 1
-address = 0x77
+bme280_address = 0x77
 bus = smbus2.SMBus(port)
 
-calibration_params = bme280.load_calibration_params(bus, address)
+bme280_calibration_params = bme280.load_calibration_params(bus, bme280_address)
 
 # sds011 - init
-sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
+sds011_sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
 
 
 def send_measure(bme_data, sds_data, pm2_5_corr):
@@ -94,15 +95,15 @@ def do_measure():
                 pass
 
             if MODE == "enabled":
-                sensor.sleep(sleep=False)
+                sds011_sensor.sleep(sleep=False)
                 time.sleep(MEASURE_TIME)
 
                 # read data bme280
-                bme_data = bme280.sample(bus, address, calibration_params)
+                bme_data = bme280.sample(bus, bme280_address, bme280_calibration_params)
                 print(bme_data)
 
-                sds011_data = sensor.query()
-                sensor.sleep()
+                sds011_data = sds011_sensor.query()
+                sds011_sensor.sleep()
                 #sds011_data = None #test exception
 
                 #fix when sds011 sensor stop working
@@ -135,7 +136,7 @@ def do_measure():
                 time.sleep(180) #wait 3min and check for new configuration
 
     except KeyboardInterrupt:
-        sensor.sleep()
+        sds011_sensor.sleep()
 
 
 if __name__ == "__main__":
@@ -143,10 +144,12 @@ if __name__ == "__main__":
         do_measure()
 
     except Exception as ex:
-        sensor.sleep()
-        print("Exception: "+ex)
+        sds011_sensor.sleep()
+        print("Exception: "+type(ex).__name__)
+        traceback.print_exc()
 
     except InterruptedError as ie:
-        sensor.sleep()
-        print("Interrupted error: "+ie)
+        sds011_sensor.sleep()
+        print("Interrupted error: "+type(ie).__name__)
+        traceback.print_exc()
 
