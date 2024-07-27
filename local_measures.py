@@ -14,9 +14,9 @@ def save_measure_to_csv(data):
 def send_local_saved_measures(SERVER_URL_PCKG):
     jsondict = {}
     with open('measures.csv', "r") as measure_file:
-        csv_data = csv.DictReader(measure_file, fieldnames=['stationId','date','temp',
-                                                            'humidity','pressure','pm25','pm25Corr','pm10'])
-        jsondict['measureList']=[]
+        csv_data = csv.DictReader(measure_file, fieldnames=['stationId', 'date', 'temp',
+                                                            'humidity', 'pressure', 'pm25', 'pm25Corr', 'pm10'])
+        jsondict['measureList'] = []
         try:
             for rows in csv_data:
                 print(rows)#Just for reference
@@ -26,9 +26,9 @@ def send_local_saved_measures(SERVER_URL_PCKG):
         try:
             headers = {'Content-Type': 'application/json'}
             body = json.dumps(jsondict)
-            newRequest = requests.post(SERVER_URL_PCKG, data=body, headers=headers)
-            print("Sending local saved measures result: " + str(newRequest))
-            if newRequest.status_code==200:
+            new_request = requests.post(SERVER_URL_PCKG, data=body, headers=headers)
+            print("Sending local saved measures result: " + str(new_request))
+            if new_request.status_code==200:
                 measure_file.close()
                 os.remove('measures.csv')
             return True
