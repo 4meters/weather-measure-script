@@ -5,6 +5,9 @@ import time
 import datetime
 import traceback
 
+import py_AHTx0
+
+
 from working_mode import get_working_mode
 from local_measures import *
 
@@ -33,27 +36,27 @@ STATION_ID = read_stationId()
 
 MODE = "enabled", 180 #default
 
-
+#smbus i2c port
+port = 1
 
 # bme280 - init
-port = 1
 bme280_address = 0x77
 bus = smbus2.SMBus(port)
+calibration_params = bme280.load_calibration_params(bus, bme280_address)
 
-bme280_calibration_params = bme280.load_calibration_params(bus, bme280_address)
+# aht10 - init
+aht10_address = 0x38
+aht10_sensor = py_AHTx0.AHTx0(port, aht10_address)
 
-# sds011 - init
-sds011_sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
 
-
-def send_measure(bme_data, sds_data, pm2_5_corr):
+def send_measure(bme_data, aht10_humidity, sds_data, pm2_5_corr):
 
 
     currentTime = datetime.datetime.utcnow().isoformat()
     data = {'stationId': STATION_ID,
             'date': str(currentTime)+'Z',
             'temp': round(bme_data.temperature, 2),
-            'humidity': round(bme_data.humidity, 2),
+            'humidity': round(aht10_humidity, 2),
             'pressure': round(bme_data.pressure, 2),
             'pm25': (sds_data[0]),
             'pm10': (sds_data[1]),
@@ -82,7 +85,7 @@ def send_measure(bme_data, sds_data, pm2_5_corr):
 
 
 def do_measure():
-    global MODE, MEASURE_INTERVAL
+    global MODE, MEASURE_INTERVAL, sds011_sensor
     try:
         while True:
             MODE, MEASURE_INTERVAL = get_working_mode(STATION_ID) #before each measure get configuration from remote
@@ -99,7 +102,7 @@ def do_measure():
                 time.sleep(MEASURE_TIME)
 
                 # read data bme280
-                bme_data = bme280.sample(bus, bme280_address, bme280_calibration_params)
+                bme_data = bme280.sample(bus, bme280_address, calibration_params)
                 print(bme_data)
 
                 sds011_data = sds011_sensor.query()
@@ -118,16 +121,22 @@ def do_measure():
                 print("pm2.5: " + str(pm2_5))
 
                 print("sds011 pm2.5 corrected")
-                if bme_data.humidity > 95.00:
-                    humidity = 95.00
-                else:
-                    humidity = bme_data.humidity
-                pm2_5_corrected = pm2_5 * 2.8 * pow((100 - humidity), -0.3745)
+
+                aht10_humidity = aht10_sensor.relative_humidity
+
+                print("aht10 humidity: "+str(aht10_humidity))
+
+                humidity_for_pm2_5 = aht10_humidity
+
+                if aht10_humidity > 95.00:
+                    humidity_for_pm2_5 = 95.00
+
+                pm2_5_corrected = pm2_5 * 2.8 * pow((100 - humidity_for_pm2_5), -0.3745)
                 print("pm2.5 corrected :" + str(pm2_5_corrected))
                 print("pm10: " + str(pm10))
 
                 # send measure to remote server
-                send_measure(bme_data, sds011_data, pm2_5_corrected)
+                send_measure(bme_data, aht10_humidity, sds011_data, pm2_5_corrected)
 
                 print("Waiting for next measure...")
                 time.sleep(MEASURE_INTERVAL)
@@ -141,6 +150,8 @@ def do_measure():
 
 if __name__ == "__main__":
     try:
+        # sds011 - init
+        sds011_sensor = sds011.SDS011("/dev/ttyUSB0", use_query_mode=True)
         do_measure()
 
     except Exception as ex:
